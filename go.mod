@@ -3,6 +3,7 @@ module github.com/Newo123/payment-bot-go
 go 1.27.0
 
 require (
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/redis/go-redis/v9 v9.22.0

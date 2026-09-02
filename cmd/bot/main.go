@@ -8,10 +8,12 @@ import (
 	"syscall"
 	"time"
 
-	paymentstelegram "github.com/Newo123/payment-bot-go/internal/features/payments/transport/telegram"
-	userstelegram "github.com/Newo123/payment-bot-go/internal/features/users/transport/telegram"
+	"github.com/Newo123/payment-bot-go/internal/features/payments"
+	"github.com/Newo123/payment-bot-go/internal/features/users"
 	"github.com/Newo123/payment-bot-go/internal/infrastructure/logger"
 	"github.com/Newo123/payment-bot-go/internal/infrastructure/logger/zap"
+	"github.com/Newo123/payment-bot-go/internal/infrastructure/postgres/pgx"
+	"github.com/Newo123/payment-bot-go/internal/infrastructure/redis/goredis"
 	"github.com/Newo123/payment-bot-go/internal/transport/telegram"
 )
 
@@ -32,26 +34,50 @@ func main() {
 	}
 	log.Debug("application time zone", logger.Any("zone", time.Local))
 
-	telegramBot := telegram.NewBot(
-		telegram.NewConfigMust(),
-		log,
-	)
+	postgresPool, err := pgx.NewPool(ctx, pgx.NewConfigMust())
+	if err != nil {
+		log.Fatal("failed to init postgres connection pool", logger.Error(err))
+	}
+	defer postgresPool.Close()
+	log.Debug("initializing postgres connection pool")
 
-	usersHandler := userstelegram.NewHandler()
-	paymentsHandler := paymentstelegram.NewHandler()
+	redisPool, err := goredis.NewPool(ctx, goredis.NewConfigMust())
+	if err != nil {
+		log.Fatal("failed to init redis connection pool", logger.Error(err))
+	}
+	defer redisPool.Close()
+	log.Debug("initializing redis connection pool")
 
+	// ----- Dependency Injection Start -----
+
+	// Repositories
+	usersPGRepo := users.NewPostgresRepository(postgresPool)
+
+	// UseCases
+	usersUC := users.NewUseCase(usersPGRepo)
+
+	// TG Handlers
+	usersHandlerTG := users.NewHandlerTG(usersUC)
+	paymentsHandlerTG := payments.NewHandlerTG()
+	// paymentsHandler := paymentstelegram.NewHandler()
+
+	// ----- Dependency Injection End -----
+
+	telegramBot, err := telegram.NewBot(telegram.NewConfigMust(), log)
+	if err != nil {
+		log.Fatal("failed to init Telegram bot", logger.Error(err))
+	}
+
+	// ----- Add Routes Start -----
 	telegramBot.RegisterRoutes(
-		usersHandler.Routes()...,
+		usersHandlerTG.Routes()...,
 	)
-
 	telegramBot.RegisterRoutes(
-		paymentsHandler.Routes()...,
+		paymentsHandlerTG.Routes()...,
 	)
+	// ----- Add Routes End -----
 
-	if err := telegramBot.Start(ctx); err != nil {
-		log.Fatal(
-			"telegram bot failed",
-			logger.Error(err),
-		)
+	if err := telegramBot.Run(ctx); err != nil {
+		log.Error("Telegram bot run error", logger.Error(err))
 	}
 }
