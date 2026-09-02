@@ -67,8 +67,8 @@ migrate-action:
 
 dev: ## Golang приложение: Запустить локально на хост-системе (для локальной разработки)
 	@export LOGGER_FOLDER=${PROJECT_ROOT}/out/logs && \
-	export POSTGRES_HOST=localhost && \
-	export REDIS_HOST=localhost && \
+	export POSTGRES_HOST=127.0.0.1 && \
+	export REDIS_HOST=127.0.0.1 && \
 	go mod tidy && \
 	go run ${PROJECT_ROOT}/cmd/bot/main.go
 

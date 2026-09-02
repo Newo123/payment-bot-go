@@ -5,6 +5,7 @@ CREATE TYPE bot.type_enum AS ENUM('DEPOSIT', 'PAYOUT');
 
 CREATE TABLE bot.cards (
     id UUID PRIMARY KEY,
+    version BIGINT NOT NULL,
     number BIGINT NOT NULL UNIQUE,
     holder VARCHAR(1000) NOT NULL,
     status bot.card_status DEFAULT 'ENABLED',
@@ -14,9 +15,9 @@ CREATE TABLE bot.cards (
 );
 
 CREATE TABLE bot.users (
-    id UUID PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
+    version BIGINT NOT NULL,
     phone VARCHAR(255) NOT NULL UNIQUE,
-    telegram_id BIGINT NOT NULL UNIQUE,
     language_code VARCHAR(255),
     first_name VARCHAR(255),
     last_name VARCHAR(255),
@@ -27,8 +28,9 @@ CREATE TABLE bot.users (
 
 CREATE TABLE bot.transactions (
     id UUID PRIMARY KEY,
+    version BIGINT NOT NULL,
     amount BIGINT NOT NULL,
-    user_id UUID NOT NULL,
+    user_id BIGINT NOT NULL,
     type bot.type_enum NOT NULL,
     operation_id BIGINT,
     card_id UUID NOT NULL,
@@ -42,4 +44,3 @@ CREATE INDEX idx_transactions_user_id ON bot.transactions(user_id);
 CREATE INDEX idx_transactions_card_id ON bot.transactions(card_id);
 CREATE INDEX idx_transactions_created_at ON bot.transactions(created_at);
 CREATE INDEX idx_cards_status ON bot.cards(status);
-CREATE INDEX idx_users_telegram_id ON bot.users(telegram_id);
